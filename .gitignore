@@ -1,0 +1,34 @@
+# Build artifacts
+/build/
+
+# Neural amp model files
+/nam_files/
+
+# Visual Studio / CMake generated files
+.vs/
+*.suo
+*.user
+*.vcxproj.user
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Compiled binaries and intermediates
+*.obj
+*.o
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.ninja
+.ninja_deps
+.ninja_log
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
