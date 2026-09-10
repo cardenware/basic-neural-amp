@@ -26,14 +26,14 @@ void AudioEngine::enumerateDevices() {
         return;
     }
 
-    std::cout << "INPUT DEVICE" << std::endl;
+    std::cout << "INPUT DEVICE(S)" << std::endl;
     for (ma_uint32 i = 0; i < inputDeviceCount; ++i) {
         const ma_device_info* DeviceInfo = &InputDeviceInfos[i];
         std::cout << "\t[" << i << "] " << DeviceInfo->name << std::endl;
         m_inputDevices.push_back({DeviceInfo->id, DeviceInfo->name});
     }
     
-    std::cout << "\nOUTPUT DEVICE" << std::endl;
+    std::cout << "\nOUTPUT DEVICE(S)" << std::endl;
     for (ma_uint32 i = 0; i < outputDeviceCount; ++i) {
         const ma_device_info* DeviceInfo = &outputDeviceInfos[i];
         std::cout << "\t[" << i << "] " << DeviceInfo->name << std::endl;

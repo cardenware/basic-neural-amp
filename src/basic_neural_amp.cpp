@@ -33,7 +33,7 @@ void createVolumeBar() {
 
 void showMenu() {
     std::cout << "========================================" << std::endl;
-    std::cout << "            ECW NEURAL AMP           " << std::endl;
+    std::cout << "             BASIC NEURAL AMP           " << std::endl;
     std::cout << "========================================" << std::endl << std::endl;
 
     std::cout << "AMP + CAB" << std::endl;
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     // AUDIO
 
     std::cout << "========================================" << std::endl;
-    std::cout << "                Audio Setup             " << std::endl;
+    std::cout << "                AUDIO SETUP             " << std::endl;
     std::cout << "========================================" << std::endl << std::endl;
 
     audioEngine.enumerateDevices();
