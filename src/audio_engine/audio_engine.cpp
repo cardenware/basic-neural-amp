@@ -54,8 +54,8 @@ void AudioEngine::start(unsigned int inputDeviceIndex, unsigned int outputDevice
 
     std::cout << "Setting up device with input index: " << inputDeviceIndex << " and output index: " << outputDeviceIndex << std::endl;
 
-    deviceConfig.sampleRate = 44100;
-    deviceConfig.periodSizeInFrames = 64;
+    deviceConfig.sampleRate = 48000;
+    deviceConfig.periodSizeInFrames = 128;
     deviceConfig.periods = 2;
     deviceConfig.performanceProfile = ma_performance_profile_low_latency;
     deviceConfig.playback.pDeviceID = &m_outputDevices[outputDeviceIndex].id;
