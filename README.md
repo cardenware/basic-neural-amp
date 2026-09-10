@@ -9,7 +9,6 @@ The application provides a small console interface for bypassing the model and a
 ## System Requirements
 
 - Windows 10 or later.
-- A C++20-compatible compiler.
 - CMake 3.12 or later.
 - Visual Studio 2022 with the Desktop development with C++ workload.
 - An available audio input device, such as a guitar interface.
