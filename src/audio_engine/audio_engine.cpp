@@ -2,16 +2,19 @@
 
 #include "audio_engine.h"
 
-AudioEngine::AudioEngine() {}
+AudioEngine::AudioEngine() {
+    m_isRecording = false;
+}
+
 AudioEngine::~AudioEngine() {
     ma_device_uninit(&m_device);
     ma_context_uninit(&m_context);
 }
 
-void AudioEngine::enumerateDevices() {
+std::vector<std::vector<Device>> AudioEngine::getDevices() {
     ma_result result = ma_context_init(NULL, 0, NULL, &m_context);
     if (result != MA_SUCCESS) {
-        return;
+        return std::vector<std::vector<Device>>{};
     }
 
     ma_device_info* InputDeviceInfos;
@@ -23,23 +26,24 @@ void AudioEngine::enumerateDevices() {
     result = ma_context_get_devices(&m_context, &outputDeviceInfos, &outputDeviceCount, &InputDeviceInfos, &inputDeviceCount);
     if (result != MA_SUCCESS) {
         ma_context_uninit(&m_context);
-        return;
+        return std::vector<std::vector<Device>>{};
     }
 
-    std::cout << "INPUT DEVICE(S)" << std::endl;
     for (ma_uint32 i = 0; i < inputDeviceCount; ++i) {
         const ma_device_info* DeviceInfo = &InputDeviceInfos[i];
-        std::cout << "\t[" << i << "] " << DeviceInfo->name << std::endl;
         m_inputDevices.push_back({DeviceInfo->id, DeviceInfo->name});
     }
     
-    std::cout << "\nOUTPUT DEVICE(S)" << std::endl;
     for (ma_uint32 i = 0; i < outputDeviceCount; ++i) {
         const ma_device_info* DeviceInfo = &outputDeviceInfos[i];
-        std::cout << "\t[" << i << "] " << DeviceInfo->name << std::endl;
         m_outputDevices.push_back({DeviceInfo->id, DeviceInfo->name});
     }
     ma_context_uninit(&m_context);
+
+    return {
+        m_inputDevices,
+        m_outputDevices
+    };
 }
 
 void AudioEngine::start(unsigned int inputDeviceIndex, unsigned int outputDeviceIndex) {
@@ -83,4 +87,28 @@ void AudioEngine::start(unsigned int inputDeviceIndex, unsigned int outputDevice
         return;
     }
     std::cout << "Device started successfully." << std::endl;
+}
+
+void AudioEngine::startRecord() {
+    m_encoderConfig = ma_encoder_config_init(
+        ma_encoding_format_wav, 
+        ma_format_f32, 
+        2, 
+        48000
+    );
+
+    if (ma_encoder_init_file("output.wav", &m_encoderConfig, &m_encoder) != MA_SUCCESS) {
+        return;
+    }
+
+    m_isRecording = true;
+}
+
+void AudioEngine::stopRecord() {
+    if (!m_isRecording) {
+        return;
+    }
+
+    ma_encoder_uninit(&m_encoder);
+    m_isRecording = false;
 }
