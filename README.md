@@ -6,6 +6,8 @@ The application provides a small console interface for bypassing the model and a
 
 ![main-menu](images/basic-neural-amp-menu.png)
 
+*Recorded audio clip is a `.wav` file saved in the project root directory.*
+
 ## System Requirements
 
 - Windows 10 or later.
