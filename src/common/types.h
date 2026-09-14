@@ -10,16 +10,17 @@ typedef struct {
 
 enum class MenuType {
     AudioSetup,
+    ModelSelection,
     MainMenu
 };
 
 enum class MenuAction {
     None,
-    SelectInput,
-    SelectOutput,
+    SelectModel,
     ToggleBypass,
     IncreaseVolume,
     DecreaseVolume,
     ToggleRecording,
+    Back,
     Quit
 };
