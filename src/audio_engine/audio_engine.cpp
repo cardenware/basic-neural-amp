@@ -11,7 +11,7 @@ AudioEngine::~AudioEngine() {
     ma_context_uninit(&m_context);
 }
 
-std::vector<std::vector<Device>> AudioEngine::getDevices() {
+const std::vector<std::vector<Device>>& AudioEngine::getDevices(){
     ma_result result = ma_context_init(NULL, 0, NULL, &m_context);
     if (result != MA_SUCCESS) {
         return std::vector<std::vector<Device>>{};
@@ -40,14 +40,14 @@ std::vector<std::vector<Device>> AudioEngine::getDevices() {
     }
     ma_context_uninit(&m_context);
 
-    return {
-        m_inputDevices,
-        m_outputDevices
-    };
+    m_devices.clear();
+    m_devices.push_back(m_inputDevices);
+    m_devices.push_back(m_outputDevices);
+
+    return m_devices;
 }
 
 void AudioEngine::start(unsigned int inputDeviceIndex, unsigned int outputDeviceIndex) {
-
     std::cout << "Initializing audio context..." << std::endl;
     ma_result result = ma_context_init(NULL, 0, NULL, &m_context);
     if (result != MA_SUCCESS) {

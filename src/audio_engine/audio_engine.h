@@ -12,7 +12,7 @@ class AudioEngine {
         AudioEngine();
         ~AudioEngine();
 
-        std::vector<std::vector<Device>> getDevices();
+        const std::vector<std::vector<Device>>& getDevices();
         
         void setProcessor(
             std::function<void(
@@ -24,11 +24,13 @@ class AudioEngine {
         }
 
         void start(unsigned int inputDeviceIndex, unsigned int outputDeviceIndex);
+
         void startRecord();
         void stopRecord();
     private:
         bool m_isRecording;
         std::vector<Device> m_inputDevices, m_outputDevices;
+        std::vector<std::vector<Device>> m_devices;
 
         ma_context m_context;
         ma_device m_device;
