@@ -16,6 +16,7 @@ add_subdirectory(
 
 add_executable(
     BasicNeuralAmp
+    src/neural_models/model_catalog/model_catalog.cpp
     src/menu/menu.cpp
     src/audio_engine/audio_engine.cpp
     third_party/miniaudio/miniaudio.c
