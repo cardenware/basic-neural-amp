@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -15,8 +16,14 @@ class Menu {
         void show();
         void clear();
 
+        MenuType getMenuType() { return m_menuType; }
         void setMenuType(MenuType menuType) { m_menuType = menuType; }
-        void setDeviceAvailables(std::vector<std::vector<Device>> *deviceAvailables) {
+
+        void setModelAvailables(const std::vector<std::filesystem::path>& modelAvailables) {
+            m_modelAvailables = modelAvailables;
+        }
+
+        void setDeviceAvailables(const std::vector<std::vector<Device>>& deviceAvailables) {
             m_deviceAvailables = deviceAvailables;
         }
 
@@ -24,19 +31,27 @@ class Menu {
             return std::vector{m_inputDeviceIndex, m_outputDeviceIndex};
         }
 
+        std::filesystem::path getSelectedModel() {
+            return m_selectedModel;
+        }
 
         MenuAction readAction();
 
     private:
         void showAudioSetupMenu();
 
+        void showModelSelectionMenu();
         void createVolumeBar();
         void showMainMenu();
 
-        void readAudioSetupOption();
-        MenuAction readMainMenuOption(char);
+        MenuAction readAudioSetupAction();
+        MenuAction readModelSelectionAction();
+        MenuAction readMainMenuAction(char);
         
-        std::vector<std::vector<Device>>* m_deviceAvailables;
+        std::vector<std::filesystem::path> m_modelAvailables;
+        std::filesystem::path m_selectedModel;
+
+        std::vector<std::vector<Device>> m_deviceAvailables;
         int m_inputDeviceIndex = -1;
         int m_outputDeviceIndex = -1;
 
