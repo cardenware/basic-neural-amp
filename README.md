@@ -48,14 +48,24 @@ The executable is created at one of these locations:
 
 ## Run
 
-Pass a `.nam` model with the required `--nam-file` option. For example:
+You can run the app from a command prompt as follows:
 
 ```powershell
-.\build\Debug\BasicNeuralAmp.exe --nam-file ".\nam_files\5150 Stealth 100w Mesa OS Full Rig - Blue, Red and Green\5150 Stealth 100w Red Mesa OS - jp_is_out_of_tune.nam"
+.\build\Debug\BasicNeuralAmp.exe
+```
+
+The `--nam-file` flag is optional. You can launch the app without it and select a model later from the in-app menu. From the main menu, press `1` to open the model selection screen shown below, then choose the numbered model you want to load.
+
+![model-selection-menu](images/model-selection-menu.png)
+
+If you want to load a specific model at startup, you can use:
+
+```powershell
+.\build\Debug\BasicNeuralAmp.exe --nam-file ".\nam_files\filename.nam"
 ```
 
 At startup, the application lists available input and output devices. Enter the index of the device to use for each prompt.
 
 ![main-menu](images/audio-setup.png)
 
-Use headphones or a suitable audio interface to reduce the risk of feedback when monitoring the processed signal.
+> *Use headphones or a suitable audio interface to reduce the risk of feedback when monitoring the processed signal.*
