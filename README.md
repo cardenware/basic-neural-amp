@@ -4,7 +4,7 @@ Basic Neural Amp is a real-time guitar amplifier application written in C++. It 
 
 The application provides a small console interface for bypassing the model and adjusting the master volume.
 
-![main-menu](images/basic-neural-amp-menu.png)
+![main-menu](images/basic-neural-amp-menu-v2.png)
 
 *Recorded audio clip is a `.wav` file saved in the project root directory.*
 
