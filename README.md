@@ -13,7 +13,7 @@ The application provides a small console interface for bypassing the model and a
 - Windows 10 or later.
 - CMake 3.12 or later.
 - Visual Studio 2022 with the Desktop development with C++ workload.
-- An available audio input device, such as a guitar interface.
+- An available audio input device, such as a guitar interface (must be configured @ 48kHz).
 - An available audio output device, such as headphones or speakers.
 - A compatible Neural Amp Modeler `.nam` model file. You can find a wide selection of models on [Tone3000](https://www.tone3000.com/).
 
