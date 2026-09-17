@@ -34,7 +34,7 @@ std::filesystem::path parseNAMFilePath(int argc, char **argv) {
 
 void setActiveModel(
     NeuralAudio::NeuralModelLoader& loader,
-    std::shared_ptr<NeuralAudio::NeuralModel>& activeModel, 
+    std::atomic<std::shared_ptr<NeuralAudio::NeuralModel>>& activeModel,
     std::filesystem::path& modelPath
 ) {
     std::cout << "Loading activeModel: " << modelPath.filename().string() << "..." << std::endl;
@@ -47,12 +47,14 @@ void setActiveModel(
         return;
     }
 
-    std::atomic_store(&activeModel, replacement);
+    activeModel.store(replacement, std::memory_order_release);
+    auto model = activeModel.load(std::memory_order_acquire);
+
     std::cout << "activeModel loaded successfully." << std::endl;
-    std::cout << "activeModel version: " << activeModel->GetModelVersion() << std::endl << std::endl;
+    std::cout << "activeModel version: " << model->GetModelVersion() << std::endl << std::endl;
 
     appState.recommendedOutputdBModel.store(
-        activeModel->GetRecommendedOutputDBAdjustment()
+        model->GetRecommendedOutputDBAdjustment()
     );
 }
 
@@ -65,7 +67,7 @@ int main(int argc, char** argv) {
     std::filesystem::path namFilePath = parseNAMFilePath(argc, argv);
 
     NeuralAudio::NeuralModelLoader loader;
-    std::shared_ptr<NeuralAudio::NeuralModel> activeModel;
+    std::atomic<std::shared_ptr<NeuralAudio::NeuralModel>> activeModel;
     if (!namFilePath.empty()) {
         appState.modelName = namFilePath.stem().string();
         setActiveModel(
@@ -92,7 +94,7 @@ int main(int argc, char** argv) {
             std::vector<float> inputCopy(input, input + frameCount);
             std::vector<float> processed(frameCount);
             
-            auto model = std::atomic_load(&activeModel);
+            auto model = activeModel.load(std::memory_order_acquire);
             if (appState.bypass.load(std::memory_order_relaxed) || !model) {
                 processed = inputCopy;
             }
