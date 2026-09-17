@@ -2,6 +2,17 @@
 #include <iostream>
 
 ModelCatalog::ModelCatalog() {
+    const char* nam_dir = "nam_files";
+
+    if (!std::filesystem::exists(nam_dir)) {
+        if (std::filesystem::create_directory(nam_dir)) {
+            std::cout << "nam_files directory created" << std::endl;
+        }
+        else {
+            std::cout << "nam_files directory couldn't be created" << std::endl;
+        }
+    }   // else, the directory already exists
+    
     // look for .nam files recursively...
     update();
 }
