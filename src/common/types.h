@@ -8,6 +8,13 @@ typedef struct {
     std::string name;
 } Device;
 
+typedef struct {
+    std::string modelName;
+    float masterVolume;
+    float recommendedOutputdB;
+    bool bypass;
+} AmpParameters;
+
 enum class MenuType {
     AudioSetup,
     ModelSelection,
@@ -23,4 +30,10 @@ enum class MenuAction {
     ToggleRecording,
     Back,
     Quit
+};
+
+enum class FilterType {
+    LowPass,
+    HighPass,
+    Peaking
 };
