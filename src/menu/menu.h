@@ -10,7 +10,7 @@
 
 class Menu {
     public:
-        Menu(AppState*);
+        Menu(const AppState&);
         ~Menu();
 
         void show();
@@ -58,5 +58,5 @@ class Menu {
         char m_option;
 
         MenuType m_menuType;
-        AppState* m_appState;
+        const AppState& m_appState;
 };

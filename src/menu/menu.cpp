@@ -1,7 +1,10 @@
 #include "menu.h"
 #include "conio.h"
 
-Menu::Menu(AppState* appState) { m_menuType = MenuType::AudioSetup; m_appState = appState; }
+Menu::Menu(const AppState& appState)
+    : m_appState(appState) {
+    m_menuType = MenuType::AudioSetup;
+}
 
 Menu::~Menu() {}
 
@@ -84,52 +87,40 @@ void Menu::showModelSelectionMenu() {
     std::cout << "[B] Back" << std::endl << std::endl;
 }
 
-void Menu::createVolumeBar() {
-std::cout <<"[";
-for (int i = 0; i < 10; ++i) {
-    char symbol = (
-        i < (m_appState->masterVolume.load(std::memory_order_relaxed) * 10.0f)
-    ) ? '#' : '-';
-    std::cout << symbol;
-}
-std::cout << "]: " << static_cast<int>(
-    std::lround(m_appState->masterVolume.load(std::memory_order_relaxed) * 100.0f)
-) << "%" << std::endl << std::endl;
-}
+// void Menu::createVolumeBar() {
+//     std::cout <<"[";
+//     for (int i = 0; i < 10; ++i) {
+//         char symbol = (
+//             i < (m_ampParameters.masterVolume * 10.0f)
+//         ) ? '#' : '-';
+//         std::cout << symbol;
+//     }
+//     std::cout << "]: " << static_cast<int>(
+//         std::lround(m_ampParameters.masterVolume * 100.0f)
+//     ) << "%" << std::endl << std::endl;
+// }
 
 void Menu::showMainMenu() {
     std::cout << "========================================" << std::endl;
     std::cout << "             BASIC NEURAL AMP           " << std::endl;
     std::cout << "========================================" << std::endl << std::endl;
 
-    std::cout << "AMP + CAB" << std::endl;
-    std::cout << (m_appState->modelName.empty() ? "None": m_appState->modelName) << std::endl << std::endl;
+    std::cout << "AUDIO CHAIN" << std::endl;
+    std::cout << (m_appState.audioChain.empty() ? "Not configured": m_appState.audioChain) << std::endl << std::endl;
 
-    std::cout << "MASTER VOLUME" << std::endl;
-    createVolumeBar();
-
-    std::cout << "CONTROLS" << std::endl;
-
-    std::string bypass = m_appState->bypass.load(std::memory_order_relaxed) ? "On" : "Off";
-    std::string recordingState = m_appState->isRecording.load(std::memory_order_relaxed) ? "Recording" : "Stopped";
+    std::string recordingState = m_appState.isRecording.load(std::memory_order_relaxed) ? "Recording" : "Stopped";
 
     std::cout << "[1] Select model" << std::endl; 
-    std::cout << "[2] Bypass: " << bypass << std::endl;
-    std::cout << "[3] Increase volume +10%" << std::endl;
-    std::cout << "[4] Decrease volume -10%" << std::endl;
-    std::cout << "[5] Start/Stop record: " << recordingState << std::endl;
-    std::cout << "[6] Quit" << std::endl << std::endl;
+    std::cout << "[2] Start/Stop record: " << recordingState << std::endl;
+    std::cout << "[3] Quit" << std::endl << std::endl;
     std::cout << "Press a number to select an option." << std::flush;
 }
 
 MenuAction Menu::readMainMenuAction(char option) {
     switch (option) {
         case '1': return MenuAction::SelectModel;
-        case '2': return MenuAction::ToggleBypass;
-        case '3': return MenuAction::IncreaseVolume;
-        case '4': return MenuAction::DecreaseVolume;
-        case '5': return MenuAction::ToggleRecording;
-        case '6': return MenuAction::Quit;
+        case '2': return MenuAction::ToggleRecording;
+        case '3': return MenuAction::Quit;
         default:  return MenuAction::None;
     }
 }
@@ -164,24 +155,24 @@ MenuAction Menu::readModelSelectionAction() {
 
 MenuAction Menu::readAudioSetupAction() {
     std::string input;
-    std::size_t position;
-    int index;
+    std::size_t position = 0;
+    int index = 0;
 
     std::cout << "Enter an input device number: ";
     std::cin >> input;
-    
+
     try {
         position = 0;
         index = std::stoi(input, &position);
 
-        if (position == input.size() ||
-            index >= 0 ||
-            static_cast<std::size_t>(index) <= m_modelAvailables.size()
-        ) {
+        if (position == input.size() &&
+            index >= 0 &&
+            static_cast<std::size_t>(index) < m_deviceAvailables[0].size()) {
             m_inputDeviceIndex = index;
+        } else {
+            return MenuAction::None;
         }
-    }
-    catch (...) {
+    } catch (...) {
         return MenuAction::None;
     }
 
@@ -192,14 +183,14 @@ MenuAction Menu::readAudioSetupAction() {
         position = 0;
         index = std::stoi(input, &position);
 
-        if (position == input.size() ||
-            index >= 0 ||
-            static_cast<std::size_t>(index) <= m_modelAvailables.size()
-        ) {
+        if (position == input.size() &&
+            index >= 0 &&
+            static_cast<std::size_t>(index) < m_deviceAvailables[1].size()) {
             m_outputDeviceIndex = index;
+        } else {
+            return MenuAction::None;
         }
-    }
-    catch (...) {
+    } catch (...) {
         return MenuAction::None;
     }
 

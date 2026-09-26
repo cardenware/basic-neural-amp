@@ -6,11 +6,16 @@
 #include <atomic>
 #include <algorithm>
 
+#include "common/types.h"
 #include "common/app_state.h"
 #include "neural_models/model_catalog/model_catalog.h"
 #include "menu/menu.h"
-#include "NeuralAudio/NeuralModel.h"
+
 #include "audio_engine/audio_engine.h"
+
+#include "audio_processor/chain/chain.h"
+#include "audio_processor/neural_model_adapter/neural_model_adapter.h"
+#include "audio_processor/equalizer/equalizer.h"
 
 AppState appState;
 
@@ -32,54 +37,39 @@ std::filesystem::path parseNAMFilePath(int argc, char **argv) {
     }
 }
 
-void setActiveModel(
-    NeuralAudio::NeuralModelLoader& loader,
-    std::atomic<std::shared_ptr<NeuralAudio::NeuralModel>>& activeModel,
-    std::filesystem::path& modelPath
-) {
-    std::cout << "Loading activeModel: " << modelPath.filename().string() << "..." << std::endl;
-    std::shared_ptr<NeuralAudio::NeuralModel> replacement{
-        loader.CreateFromFile(modelPath)
-    };
-
-    if (!replacement) {
-        std::cerr << "Couldn't load model: " << modelPath << std::endl;
-        return;
-    }
-
-    activeModel.store(replacement, std::memory_order_release);
-    auto model = activeModel.load(std::memory_order_acquire);
-
-    std::cout << "activeModel loaded successfully." << std::endl;
-    std::cout << "activeModel version: " << model->GetModelVersion() << std::endl << std::endl;
-
-    appState.recommendedOutputdBModel.store(
-        model->GetRecommendedOutputDBAdjustment()
-    );
-}
-
 int main(int argc, char** argv) {
     AudioEngine audioEngine;
     ModelCatalog modelCatalog;
-    Menu menu(&appState);
+
+    auto audioChain = std::make_shared<AudioChain>();
+
+    std::size_t eqId = audioChain->addProcessor<Equalizer>(48000.0f);
+    auto* eq = audioChain->getProcessor<Equalizer>(eqId);
+    // Filter range -12dB -> +12dB
+    eq->setBand(FilterType::HighPass, 40, 0.707, 0.0);
+    eq->setBand(FilterType::Peaking, 90, 1.0, 0.0);   // bass
+    eq->setBand(FilterType::Peaking, 650, 1.0, 0.0);    // mid
+    eq->setBand(FilterType::Peaking, 2800, 1.0, 0.0);  // treble
+    eq->setBand(FilterType::LowPass, 6000.0, 0.707, 0.0);
+
+    std::size_t neuralAmpId = audioChain->addProcessor<NeuralModelAdapter>();
+    auto* neuralAmp = audioChain->getProcessor<NeuralModelAdapter>(neuralAmpId);
+
+    Menu menu(appState);
+    
     menu.setModelAvailables(modelCatalog.get());
     
     std::filesystem::path namFilePath = parseNAMFilePath(argc, argv);
 
-    NeuralAudio::NeuralModelLoader loader;
-    std::atomic<std::shared_ptr<NeuralAudio::NeuralModel>> activeModel;
     if (!namFilePath.empty()) {
-        appState.modelName = namFilePath.stem().string();
-        setActiveModel(
-            loader,
-            activeModel,
-            namFilePath
-        );
+        neuralAmp->setActiveModel(namFilePath);
     }
-    
-    audioEngine.setProcessor(
-        [&activeModel](
 
+    std::size_t maxInputFrames = 4096;
+    auto processedSignal = std::make_shared<float[]>(maxInputFrames);
+
+    audioEngine.setProcessor(
+        [processedSignal, audioChain](
             const float* input,
             float* output,
             unsigned int frameCount) {
@@ -90,40 +80,18 @@ int main(int argc, char** argv) {
                 write:
                 output[0 ... frameCount-1]
             */
-
-            std::vector<float> inputCopy(input, input + frameCount);
-            std::vector<float> processed(frameCount);
-            
-            auto model = activeModel.load(std::memory_order_acquire);
-            if (appState.bypass.load(std::memory_order_relaxed) || !model) {
-                processed = inputCopy;
-            }
-            else {
-                model->Process(
-                    inputCopy.data(),
-                    processed.data(),
-                    static_cast<int>(frameCount)
-                );
-            }
+            std::copy(input, input + frameCount, processedSignal.get());
             
             // dB = 20 * log10(A/A0); A = amplitude, A0 = reference amplitude
-            // Calculate outputGain (MASTER VOLUME)
-            float currentVolume = appState.masterVolume.load(std::memory_order_relaxed);
-            float recommendedOutputdB = appState.recommendedOutputdBModel.load(std::memory_order_relaxed);
-            const float outputGain = std::pow(
-                10.0f, 
-                recommendedOutputdB / 20.0f) * ((currentVolume * 100.0f) / 100.0f
-            );
+            
+            audioChain->process(processedSignal.get(), frameCount);
 
             // mono -> stereo
-            for (unsigned int i = 0;
-                 i < frameCount;
-                 ++i) {
-                output[i * 2 + 0] =
-                    processed[i] * outputGain;
-
-                output[i * 2 + 1] =
-                    processed[i] * outputGain;
+            for (unsigned int i = 0; i < frameCount; ++i) {
+                // float sample = processedSignal.get()[i] * outputGain;
+                float sample = processedSignal.get()[i];
+                output[i * 2 + 0] = sample;
+                output[i * 2 + 1] = sample;
             }
         }
     );
@@ -140,6 +108,8 @@ int main(int argc, char** argv) {
     menu.setMenuType(MenuType::MainMenu);
     MenuAction action;
     bool isRunning = true;    
+
+    appState.audioChain = audioChain->getAudioChainStr();
 
     do {
         menu.clear();
@@ -161,35 +131,10 @@ int main(int argc, char** argv) {
                 std::filesystem::path selectedModel = menu.getSelectedModel();
 
                 if (!selectedModel.empty()) {
-                    appState.modelName = selectedModel.filename().string();
-                    setActiveModel(loader, activeModel, selectedModel);
+                    neuralAmp->setActiveModel(selectedModel);
                 }
                 
                 menu.setMenuType(MenuType::MainMenu);
-                break;
-            }
-            case MenuAction::ToggleBypass:
-                appState.bypass.store(
-                    !appState.bypass.load(std::memory_order_relaxed),
-                    std::memory_order_relaxed
-                );
-                break;
-            case MenuAction::IncreaseVolume: {
-                float currentVolume = appState.masterVolume.load(std::memory_order_relaxed);
-                
-                appState.masterVolume.store(
-                    std::min(1.0f, currentVolume + 0.1f),
-                    std::memory_order_relaxed
-                );
-                break;
-            }
-            case MenuAction::DecreaseVolume: {
-                float currentVolume = appState.masterVolume.load(std::memory_order_relaxed);
-                
-                appState.masterVolume.store(
-                    std::max(0.0f, currentVolume - 0.1f),
-                    std::memory_order_relaxed
-                );
                 break;
             }
             case MenuAction::ToggleRecording: {
