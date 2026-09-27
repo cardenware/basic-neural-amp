@@ -90,7 +90,6 @@ int main(int argc, char** argv) {
                 menu.push(MenuType::NeuralModelAdapterEdit);
                 break;
             case MenuAction::OpenNeuralModelSelector:
-                std::cout << "OPEN MODEL SELECTOR" << std::endl;
                 menu.push(MenuType::NeuralModelSelector);
                 break;
             case MenuAction::ToggleRecording:
