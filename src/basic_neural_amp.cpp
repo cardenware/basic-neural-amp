@@ -2,68 +2,25 @@
 #include <filesystem>
 #include <sstream>
 #include <string>
-#include <cmath>
 #include <atomic>
 #include <algorithm>
 
 #include "common/types.h"
 #include "common/app_state.h"
-#include "neural_models/model_catalog/model_catalog.h"
 #include "menu/menu.h"
 
 #include "audio_engine/audio_engine.h"
 
 #include "audio_processor/chain/chain.h"
-#include "audio_processor/neural_model_adapter/neural_model_adapter.h"
-#include "audio_processor/equalizer/equalizer.h"
 
 AppState appState;
 
-std::filesystem::path parseNAMFilePath(int argc, char **argv) {
-    if (argc < 2) {
-        std::cerr << "No .nam file was provided. Skipping model loading..." << std::endl;
-        return std::filesystem::path{};
-    }
-
-    std::string namFileFlag = argv[1];
-
-    if (std::string(argv[1]) != "--nam-file") {
-        std::cerr << "Unkown flag: " << "namFileFlag" << std::endl;
-        return std::filesystem::path{};
-    }
-    else {
-        std::filesystem::path namFilePath = argv[2];
-        return namFilePath;
-    }
-}
-
 int main(int argc, char** argv) {
     AudioEngine audioEngine;
-    ModelCatalog modelCatalog;
 
     auto audioChain = std::make_shared<AudioChain>();
 
-    std::size_t eqId = audioChain->addProcessor<Equalizer>(48000.0f);
-    auto* eq = audioChain->getProcessor<Equalizer>(eqId);
-    // Filter range -12dB -> +12dB
-    eq->setBand(FilterType::HighPass, 40, 0.707, 0.0);
-    eq->setBand(FilterType::Peaking, 90, 1.0, 0.0);   // bass
-    eq->setBand(FilterType::Peaking, 650, 1.0, 0.0);    // mid
-    eq->setBand(FilterType::Peaking, 2800, 1.0, 0.0);  // treble
-    eq->setBand(FilterType::LowPass, 6000.0, 0.707, 0.0);
-
-    std::size_t neuralAmpId = audioChain->addProcessor<NeuralModelAdapter>();
-    auto* neuralAmp = audioChain->getProcessor<NeuralModelAdapter>(neuralAmpId);
-
-    Menu menu(appState);
-    
-    menu.setModelAvailables(modelCatalog.get());
-    
-    std::filesystem::path namFilePath = parseNAMFilePath(argc, argv);
-
-    if (!namFilePath.empty()) {
-        neuralAmp->setActiveModel(namFilePath);
-    }
+    Menu menu(appState, audioEngine, *audioChain);
 
     std::size_t maxInputFrames = 4096;
     auto processedSignal = std::make_shared<float[]>(maxInputFrames);
@@ -97,72 +54,57 @@ int main(int argc, char** argv) {
     );
 
     // AUDIO SETUP
-    menu.setMenuType(MenuType::AudioSetup);
-    menu.setDeviceAvailables(audioEngine.getDevices());
+    menu.push(MenuType::AudioSetup);
     menu.show();
-    menu.readAction();
 
-    std::vector<int> selectedDevices = menu.getSelectedDeviceIndices();
-    audioEngine.start(selectedDevices[0], selectedDevices[1]);
+    menu.read();
 
-    menu.setMenuType(MenuType::MainMenu);
-    MenuAction action;
-    bool isRunning = true;    
+    menu.push(MenuType::MainMenu);
 
-    appState.audioChain = audioChain->getAudioChainStr();
-
+    MenuAction menuAction;
+    appState.isRunning = true; 
+    
     do {
-        menu.clear();
+        appState.audioChain = audioChain->getAudioChainStr();
+
         menu.show();
+        menuAction = menu.read();
 
-        action = menu.readAction();
-
-        switch (action) {
-            case MenuAction::SelectModel: {
-                menu.setMenuType(MenuType::ModelSelection);
-                menu.show();
-                action = menu.readAction();
-                
-                if (action == MenuAction::Back) {
-                    menu.setMenuType(MenuType::MainMenu);
-                    break;
-                }
-
-                std::filesystem::path selectedModel = menu.getSelectedModel();
-
-                if (!selectedModel.empty()) {
-                    neuralAmp->setActiveModel(selectedModel);
-                }
-                
-                menu.setMenuType(MenuType::MainMenu);
+        switch(menuAction) {
+            case MenuAction::OpenAudioChain:
+                menu.push(MenuType::AudioChain);
                 break;
-            }
-            case MenuAction::ToggleRecording: {
-                bool isRecording = !appState.isRecording.load(
-                    std::memory_order_relaxed
-                );
-
-                appState.isRecording.store(
-                    isRecording,
-                    std::memory_order_relaxed
-                );
-
-                if (isRecording) {
-                    audioEngine.startRecord();
-                }
-                else {
-                    audioEngine.stopRecord();
-                }
+            case MenuAction::OpenProcessorAdd:
+                menu.push(MenuType::ProcessorAdd);
                 break;
-            }
+            case MenuAction::OpenProcessorEdit:
+                menu.push(MenuType::ProcessorEdit);
+                break;
+            case MenuAction::OpenProcessorRemove:
+                menu.push(MenuType::ProcessorRemove);
+                break;
+            case MenuAction::OpenProcessorReorder:
+                menu.push(MenuType::ProcessorReorder);
+                break;
+            case MenuAction::OpenNeuralModelAdapterEdit:
+                menu.push(MenuType::NeuralModelAdapterEdit);
+                break;
+            case MenuAction::OpenNeuralModelSelector:
+                std::cout << "OPEN MODEL SELECTOR" << std::endl;
+                menu.push(MenuType::NeuralModelSelector);
+                break;
+            case MenuAction::ToggleRecording:
+                break;
+            case MenuAction::Back:
+                menu.pop();
+                break;
             case MenuAction::Quit:
-                isRunning = false;
+                appState.isRunning = false;
                 break;
             default:
                 break;
         }
-        
-    } while(isRunning);
+    } while(appState.isRunning);
 
     return 0;
 }

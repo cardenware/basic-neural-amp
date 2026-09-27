@@ -1,198 +1,121 @@
 #include "menu.h"
 #include "conio.h"
 
-Menu::Menu(const AppState& appState)
-    : m_appState(appState) {
-    m_menuType = MenuType::AudioSetup;
-}
+Menu::Menu(AppState& appState, AudioEngine& audioEngine, AudioChain& audioChain)
+    :   m_mainScreen(appState), 
+        m_audioSetupScreen(audioEngine),
+        m_audioChainScreen(audioChain),
+        m_addProcessorScreen(audioChain),
+        m_editProcessorScreen(audioChain),
+        m_removeProcessorScreen(audioChain),
+        m_reorderProcessorScreen(audioChain) {
+            m_selectedNeuralAdapter = nullptr;
+        }
 
 Menu::~Menu() {}
 
 void Menu::show() {
-    clear();
-    
-    switch (m_menuType)
+    MenuType currentMenu = m_stack.back();
+
+    switch (currentMenu)
     {
         case MenuType::MainMenu:
-            showMainMenu();
+            m_mainScreen.show();
             break;
         case MenuType::AudioSetup:
-            showAudioSetupMenu();
+            m_audioSetupScreen.show();
             break;
-        case MenuType::ModelSelection:
-            showModelSelectionMenu();
+        case MenuType::AudioChain:
+            m_audioChainScreen.show();
+            break;
+        case MenuType::ProcessorAdd:
+            m_addProcessorScreen.show();
+            break;
+        case MenuType::ProcessorEdit:
+            m_editProcessorScreen.show();
+            break;
+        case MenuType::ProcessorRemove:
+            m_removeProcessorScreen.show();
+            break;
+        case MenuType::ProcessorReorder:
+            m_reorderProcessorScreen.show();
+            break;
+        case MenuType::NeuralModelAdapterEdit:
+            if (m_selectedNeuralAdapter) {
+                EditNeuralModelAdapterScreen screen(*m_selectedNeuralAdapter);
+                screen.show();
+            }
+            break;
+        case MenuType::NeuralModelSelector:
+            if (m_selectedNeuralAdapter) {
+                NeuralModelSelectorScreen screen(*m_selectedNeuralAdapter);
+                screen.show();
+            }
+            break;
+        default:
+            pop();
+            m_mainScreen.show();
+            break;
+    }
+}
+
+MenuAction Menu::read() {
+    MenuType currentMenu = m_stack.back();
+    MenuAction action = MenuAction::None;
+
+    switch (currentMenu) {
+        case MenuType::MainMenu:
+            action = m_mainScreen.read();
+            break;
+        case MenuType::AudioSetup:
+            action = m_audioSetupScreen.read();
+            break;
+        case MenuType::AudioChain:
+            action = m_audioChainScreen.read();
+            break;
+        case MenuType::ProcessorAdd:
+            action = m_addProcessorScreen.read();
+            break;
+        case MenuType::ProcessorEdit: {
+            action = m_editProcessorScreen.read();
+            m_selectedNeuralAdapter = m_editProcessorScreen.getProcessorSelected<NeuralModelAdapter>();
+
+            if (m_selectedNeuralAdapter) {
+                m_stack.push_back(MenuType::NeuralModelAdapterEdit);
+            }
+            break;
+        }
+        case MenuType::ProcessorRemove:
+            action = m_removeProcessorScreen.read();
+            break;
+        case MenuType::ProcessorReorder:
+            action = m_reorderProcessorScreen.read();
+            break;
+        case MenuType::NeuralModelAdapterEdit: {
+            if (m_selectedNeuralAdapter) {
+                EditNeuralModelAdapterScreen screen(*m_selectedNeuralAdapter);
+                action = screen.read();
+
+                if (action == MenuAction::Back) {
+                    m_selectedNeuralAdapter = nullptr;
+                    pop();
+                }
+            }
+            break;
+        }
+        case MenuType::NeuralModelSelector:
+            if (m_selectedNeuralAdapter) {
+                NeuralModelSelectorScreen screen(*m_selectedNeuralAdapter);
+                action = screen.read();
+
+                if (action == MenuAction::Back) {
+                    pop();
+                }
+            }
             break;
         default:
             break;
     }
-}
 
-void Menu::clear() {
-    // \033[H moves the cursor to the top-left home position
-    // \033[2J clears the entire screen
-    std::cout << "\033[H\033[2J" << std::flush;
-}
-
-MenuAction Menu::readAction() {
-    switch (m_menuType)
-    {
-        case MenuType::MainMenu:
-            return readMainMenuAction(_getch());        
-        case MenuType::AudioSetup:
-            return readAudioSetupAction();
-        case MenuType::ModelSelection:
-            return readModelSelectionAction();
-        default:
-            return MenuAction::None;
-    }
-}
-
-void Menu::showAudioSetupMenu() {
-    std::cout << "========================================" << std::endl;
-    std::cout << "                AUDIO SETUP             " << std::endl;
-    std::cout << "========================================" << std::endl << std::endl;
-
-    std::cout << "INPUT DEVICE(S)" << std::endl;
-
-    for (std::size_t i = 0; i < m_deviceAvailables[0].size(); ++i) {
-        std::cout << "\t[" << i << "] " << m_deviceAvailables[0][i].name << std::endl;
-    }
-    
-    std::cout << "OUTPUT DEVICE(S)" << std::endl;
-
-    for (std::size_t i = 0; i < m_deviceAvailables[1].size(); ++i) {
-        std::cout << "\t[" << i << "] " << m_deviceAvailables[1][i].name << std::endl;
-    }
-}
-
-void Menu::showModelSelectionMenu() {
-    std::string prevFolder = "";
-
-    std::cout << "========================================" << std::endl;
-    std::cout << "              MODEL SELECTION           " << std::endl;
-    std::cout << "========================================" << std::endl << std::endl;
-    
-    for (size_t i = 0; i < m_modelAvailables.size(); ++i) {
-        std::filesystem::path entry = m_modelAvailables[i];
-        std::string parentFolder = entry.parent_path().filename().string();
-
-        if (prevFolder != parentFolder) { // Folder has changed
-            std::cout << "- " << parentFolder << "/" << std::endl;
-            prevFolder = parentFolder;
-        }
-        
-        std::cout << "\t[" << i << "] " << entry.filename().string() << std::endl;
-    }
-
-    std::cout << "[B] Back" << std::endl << std::endl;
-}
-
-// void Menu::createVolumeBar() {
-//     std::cout <<"[";
-//     for (int i = 0; i < 10; ++i) {
-//         char symbol = (
-//             i < (m_ampParameters.masterVolume * 10.0f)
-//         ) ? '#' : '-';
-//         std::cout << symbol;
-//     }
-//     std::cout << "]: " << static_cast<int>(
-//         std::lround(m_ampParameters.masterVolume * 100.0f)
-//     ) << "%" << std::endl << std::endl;
-// }
-
-void Menu::showMainMenu() {
-    std::cout << "========================================" << std::endl;
-    std::cout << "             BASIC NEURAL AMP           " << std::endl;
-    std::cout << "========================================" << std::endl << std::endl;
-
-    std::cout << "AUDIO CHAIN" << std::endl;
-    std::cout << (m_appState.audioChain.empty() ? "Not configured": m_appState.audioChain) << std::endl << std::endl;
-
-    std::string recordingState = m_appState.isRecording.load(std::memory_order_relaxed) ? "Recording" : "Stopped";
-
-    std::cout << "[1] Select model" << std::endl; 
-    std::cout << "[2] Start/Stop record: " << recordingState << std::endl;
-    std::cout << "[3] Quit" << std::endl << std::endl;
-    std::cout << "Press a number to select an option." << std::flush;
-}
-
-MenuAction Menu::readMainMenuAction(char option) {
-    switch (option) {
-        case '1': return MenuAction::SelectModel;
-        case '2': return MenuAction::ToggleRecording;
-        case '3': return MenuAction::Quit;
-        default:  return MenuAction::None;
-    }
-}
-
-MenuAction Menu::readModelSelectionAction() {
-    std::cout << "Enter a model number, or press B to go back: ";
-
-    std::string input;
-    std::cin >> input;
-
-    if (input == "b" || input == "B") {
-        return MenuAction::Back;
-    }
-
-    try {
-        std::size_t position = 0;
-        int index = std::stoi(input, &position);
-
-        if (position == input.size() ||
-            index >= 0 ||
-            static_cast<std::size_t>(index) <= m_modelAvailables.size()
-        ) {
-            m_selectedModel = m_modelAvailables[index];
-        }
-    }
-    catch (...) {
-        m_selectedModel = std::filesystem::path{};
-        return MenuAction::None;
-    }
-    return MenuAction::None;
-}
-
-MenuAction Menu::readAudioSetupAction() {
-    std::string input;
-    std::size_t position = 0;
-    int index = 0;
-
-    std::cout << "Enter an input device number: ";
-    std::cin >> input;
-
-    try {
-        position = 0;
-        index = std::stoi(input, &position);
-
-        if (position == input.size() &&
-            index >= 0 &&
-            static_cast<std::size_t>(index) < m_deviceAvailables[0].size()) {
-            m_inputDeviceIndex = index;
-        } else {
-            return MenuAction::None;
-        }
-    } catch (...) {
-        return MenuAction::None;
-    }
-
-    std::cout << "Enter an output device number: ";
-    std::cin >> input;
-
-    try {
-        position = 0;
-        index = std::stoi(input, &position);
-
-        if (position == input.size() &&
-            index >= 0 &&
-            static_cast<std::size_t>(index) < m_deviceAvailables[1].size()) {
-            m_outputDeviceIndex = index;
-        } else {
-            return MenuAction::None;
-        }
-    } catch (...) {
-        return MenuAction::None;
-    }
-
-    return MenuAction::None;
+    return action;
 }

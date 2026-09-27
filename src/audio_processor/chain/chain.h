@@ -19,7 +19,7 @@ class AudioChain {
         }
         
         template<typename T>
-        T* getProcessor(std::size_t id) {
+        T* getProcessorById(std::size_t id) {
             for (const auto& processor : m_audioProcessors) {
                 if (processor->getId() == id) {
                     return dynamic_cast<T*>(processor.get());
@@ -27,6 +27,15 @@ class AudioChain {
             }
 
             return nullptr;
+        }
+
+        template<typename T>
+        T* getProcessorByIndex(std::size_t index) {
+            return dynamic_cast<T*>(m_audioProcessors[index].get());
+        }
+
+        void removeProcessorByIndex(std::size_t index) {
+            m_audioProcessors.erase(m_audioProcessors.begin() + index);
         }
 
         void process(float* input, std::size_t frameCount) {
@@ -42,6 +51,10 @@ class AudioChain {
             }
         }
 
+        void swap(int src, int dst) {
+            std::swap(m_audioProcessors[src], m_audioProcessors[dst]);
+        }
+
         std::string getAudioChainStr() {
             std::string audioChainStr = "";
 
@@ -51,11 +64,17 @@ class AudioChain {
                 }
                 audioChainStr += m_audioProcessors[i]->getName();
                 if (i < m_audioProcessors.size() - 1) {
-                    audioChainStr += "->";
+                    audioChainStr += " -> ";
                 }
             }
 
             return audioChainStr;
+        }
+
+        void list() {
+            for (std::size_t i = 0; i < m_audioProcessors.size(); ++i) {
+                std::cout << "[" << i+1 << "] " << m_audioProcessors[i]->getName() << std::endl;
+            }
         }
 
     private:

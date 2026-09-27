@@ -6,4 +6,5 @@
 struct AppState{
     std::string audioChain;
     std::atomic<bool> isRecording{false};
+    bool isRunning{false};
 };

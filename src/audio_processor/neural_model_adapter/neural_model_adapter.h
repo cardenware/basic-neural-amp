@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <filesystem>
 #include <mutex>
 
@@ -10,10 +11,10 @@
 class NeuralModelAdapter: public AudioProcessor {
     public:
         NeuralModelAdapter() {
-            m_ampParameters.bypass = false;
+            m_ampParameters.modelName.clear();
             m_ampParameters.recommendedOutputdB = 1.0f;
-            m_ampParameters.masterVolume = 1.0;
-            m_ampParameters.modelName = "";
+            m_ampParameters.masterVolume = 1.0f;
+            m_bypass = false;
         }
 
         void setActiveModel(
@@ -50,7 +51,18 @@ class NeuralModelAdapter: public AudioProcessor {
                 std::copy(inputBuffer, inputBuffer + frameCount, outputBuffer.get());
 
                 m_activeModel->Process(inputBuffer, outputBuffer.get(), frameCount);
-
+                
+                float currentVolume = m_ampParameters.masterVolume;
+                float recommendedOutput = m_ampParameters.recommendedOutputdB;
+                const float outputGain = std::pow(
+                    10.0f, 
+                    recommendedOutput / 20.0f) * ((currentVolume * 100.0f) / 100.0f
+                );
+                
+                for (int i = 0; i < frameCount; ++i) {
+                    outputBuffer[i] *= outputGain;
+                }
+                
                 std::copy(outputBuffer.get(), outputBuffer.get() + frameCount, inputBuffer);
             }
         }
@@ -58,16 +70,16 @@ class NeuralModelAdapter: public AudioProcessor {
         void reset() override {
             m_activeModel.reset();
             m_ampParameters.modelName.clear();
-            m_ampParameters.masterVolume = 1.0f;
             m_ampParameters.recommendedOutputdB = 1.0f;
+            m_ampParameters.masterVolume = 1.0f;
         }
 
         bool getBypass() override {
-            return m_ampParameters.bypass;
+            return m_bypass;
         }
 
         void setBypass(bool bypass) override {
-            m_ampParameters.bypass = bypass;
+            m_bypass = bypass;
         }
 
         float getRecommendedOutputdBModel() const {
@@ -104,8 +116,4 @@ class NeuralModelAdapter: public AudioProcessor {
         std::unique_ptr<NeuralAudio::NeuralModel> m_activeModel;
 
         AmpParameters m_ampParameters;
-        // std::string m_modelName;
-        
-        // float m_recommendedOutputdBModel;
-        // float m_masterVolume;
 };

@@ -7,56 +7,42 @@
 
 #include "../common/types.h"
 #include "../common/app_state.h"
+#include "../audio_engine/audio_engine.h"
+#include "../audio_processor/chain/chain.h"
+#include "../audio_processor/neural_model_adapter/neural_model_adapter.h"
+
+#include "screens/main_screen.h"
+#include "screens/audio_setup.h"
+#include "screens/audio_processor/audio_chain.h"
+#include "screens/audio_processor/add_processor.h"
+#include "screens/audio_processor/edit_processor.h"
+#include "screens/audio_processor/remove_processor.h"
+#include "screens/audio_processor/reorder_processor.h"
+#include "screens/audio_processor/edit_neural_model_adapter.h"
+#include "screens/audio_processor/neural_model_selector.h"
 
 class Menu {
     public:
-        Menu(const AppState&);
+        Menu(AppState&, AudioEngine&, AudioChain&);
         ~Menu();
 
         void show();
-        void clear();
 
-        MenuType getMenuType() { return m_menuType; }
-        void setMenuType(MenuType menuType) { m_menuType = menuType; }
+        void push(MenuType menuType) { m_stack.push_back(menuType); }
+        void pop()  { m_stack.pop_back(); }
 
-        void setModelAvailables(const std::vector<std::filesystem::path>& modelAvailables) {
-            m_modelAvailables = modelAvailables;
-        }
-
-        void setDeviceAvailables(const std::vector<std::vector<Device>>& deviceAvailables) {
-            m_deviceAvailables = deviceAvailables;
-        }
-
-        std::vector<int> getSelectedDeviceIndices() {
-            return std::vector{m_inputDeviceIndex, m_outputDeviceIndex};
-        }
-
-        std::filesystem::path getSelectedModel() {
-            return m_selectedModel;
-        }
-
-        MenuAction readAction();
+        MenuAction read();
 
     private:
-        void showAudioSetupMenu();
+        std::vector<MenuType> m_stack;
 
-        void showModelSelectionMenu();
-        void createVolumeBar();
-        void showMainMenu();
-
-        MenuAction readAudioSetupAction();
-        MenuAction readModelSelectionAction();
-        MenuAction readMainMenuAction(char);
+        AudioSetupScreen m_audioSetupScreen;
+        MainScreen m_mainScreen;
+        AudioChainScreen m_audioChainScreen;
+        AddProcessorScreen m_addProcessorScreen;
+        EditProcessorScreen m_editProcessorScreen;
+        RemoveProcessorScreen m_removeProcessorScreen;
+        ReorderProcessorScreen m_reorderProcessorScreen;
         
-        std::vector<std::filesystem::path> m_modelAvailables;
-        std::filesystem::path m_selectedModel;
-
-        std::vector<std::vector<Device>> m_deviceAvailables;
-        int m_inputDeviceIndex = -1;
-        int m_outputDeviceIndex = -1;
-
-        char m_option;
-
-        MenuType m_menuType;
-        const AppState& m_appState;
+        NeuralModelAdapter* m_selectedNeuralAdapter;
 };

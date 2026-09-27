@@ -10,23 +10,32 @@ typedef struct {
 
 typedef struct {
     std::string modelName;
-    float masterVolume;
     float recommendedOutputdB;
     bool bypass;
+    float masterVolume;
 } AmpParameters;
 
 enum class MenuType {
     AudioSetup,
-    ModelSelection,
-    MainMenu
+    MainMenu,
+    AudioChain,
+    ProcessorAdd,
+    ProcessorRemove,
+    ProcessorEdit,
+    ProcessorReorder,
+    NeuralModelAdapterEdit,
+    NeuralModelSelector
 };
 
 enum class MenuAction {
     None,
-    SelectModel,
-    ToggleBypass,
-    IncreaseVolume,
-    DecreaseVolume,
+    OpenAudioChain,
+    OpenProcessorAdd,
+    OpenProcessorRemove,
+    OpenProcessorEdit,
+    OpenProcessorReorder,
+    OpenNeuralModelAdapterEdit,
+    OpenNeuralModelSelector,
     ToggleRecording,
     Back,
     Quit
